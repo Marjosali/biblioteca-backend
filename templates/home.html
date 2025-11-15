@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>SALA DE LEITURA</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/booklist.css' %ion.min.js
+    https://unpkg.com/react-dom@18/umd/react-dom.production.min.js</script>
+    <script src="https://unpkg.com/babel-standalonejs</script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.5;
+            background-color: #f4f4f4;
+            color: #222222;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        button {
+            margin: 4px;
+            padding: 8px 12px;
+            background: #008000; /* Verde principal */
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #006400; /* Verde mais escuro no hover */
+        }
+        button:focus, a:focus {
+            outline: 3px solid #FF6600;
+        }
+        .book-card {
+            background: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 6px rgba(0,0,0,0.1);
+        }
+        .book-card.unavailable {
+            opacity: 0.6;
+        }
+        .book-cover {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #2ecc71; /* Verde para o loader */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+<div class="container" role="main">
+    <h1 id="page-title">Catálogo de Livros</h1>
+    <div id="book-list" role="region" aria-labelledby="page-title"></div>
+</div>
+
+<!-- VLibras -->
+<div vw class="enabled" role="complementary" aria-label="Ferramenta de tradução para Libras">
+    <div vw-access-button class="active" aria-label="Ativar tradução para Libras"></div>
+    <div vw-plugin-wrapper></div>
+</div>
+https://vlibras.gov.br/app/vlibras-plugin.js
+<script>
+  new window.VLibras.Widget('https://vlibras.gov.br/app');
+</script>
+
+<!-- React BookList -->
+<script type="text/babel">
+
+const { useState, useEffect } = React;
+
+function BookCard({ book }) {
+  const speakBook = () => {
+    if ('speechSynthesis' in window) {
+     Utterance(
+        `Livro: ${book.title}. Autor: ${book.author || 'não informado'}. ` +
+        `Ano: ${book.publication_year || 'não informado'}. ` +
+        `${book.genre ? `Gênero: ${book.genre}. ` : ''}` +
+        `Status: ${book.available ? 'Disponível' : 'Emprestado'}.`
+      );
+      msg.lang = 'pt-BR';
+      window.speechSynthesis.speak(msg);
+    }
+  };
+
+  const requestLoan = async () => {
+    const token = localStorage.getItem('access_token');
+         alertBox.setAttribute('aria-live', 'assertive');
+      alertBox.textContent = "Você precisa estar logado para solicitar empréstimo!";
+      document.body.appendChild(alertBox);
+      window.location.href = '/login/';
+      return;
+    }
+  };
+
+  return (
+    <div className={`book-card ${book.available ? '' : 'unavailable'}`} role="article" aria-labelledby={`book-title-${book.id}`} aria-describedby={`book-info-${book.id}`}>
+      <img src={book.cover} alt={`Capa do livro ${book.title}`} className="book-cover" />
+      <h2 id={`book-title-${book.id}`}>{book.title}</h2>
+      <p id={`book-info-${book.id}`}>Autor: {book.author || 'Não informado'} | Ano: {book.publication_year || 'Não informado'}</p>
+      <button aria-label={`Solicitar empréstimo do livro ${book.title}`} onClick={requestLoan}>Solicitar Empréstimo</button>
+      <button aria-label={`Ouvir informações do livro ${book.title}`} onClick={speakBook}>Ouvir</button>
+    </div>
+  );
+}
+
+function BookList() {
+  const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/books/')
+      .then(response => response.json())
+      .then(data => {
+        setBooks(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return <div className="loader" role="status" aria-label="Carregando livros"></div>;
+  }
+
+  return (
+    <div className="book-grid" role="list">
+      {books.map(book => (
+        <BookCard key={book.id} book={book} />
+      ))}
+    </div>
+  );
+}
+
+ReactDOM.render(<BookList />, document.getElementById('book-list'));
+</script>
+</body>
+</html>
